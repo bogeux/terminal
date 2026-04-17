@@ -1,51 +1,80 @@
-// Modal shell picker shown when creating a new tab (or the first tab).
-// Keyboard: ArrowUp/Down to move, Enter to pick, Escape to cancel.
-// Clicking still works. Resolves with the chosen { name, command } or null.
+// Modal picker with fuzzy-filter input.
+// Keyboard: type to filter, ArrowUp/Down to move, Enter to pick, Esc to cancel.
+// Mouse clicks still select. Resolves with the chosen entry or null.
 
 export function pickShell(shells, mountInto, { title = "Choose a shell" } = {}) {
   return new Promise((resolve) => {
     let activeIdx = 0;
+    let visible = []; // array of { btn, entry }
 
     const overlay = document.createElement("div");
     overlay.className = "shell-picker";
-    overlay.tabIndex = -1; // focusable, so it receives keydown
+    overlay.tabIndex = -1;
 
     const heading = document.createElement("h2");
-    heading.textContent = `${title}  —  Enter to pick, Esc to cancel`;
+    heading.textContent = title;
     overlay.appendChild(heading);
 
-    if (shells.length === 0) {
-      const empty = document.createElement("div");
-      empty.style.color = "var(--muted)";
-      empty.style.fontSize = "13px";
-      empty.textContent = "Nothing to choose — press Esc.";
-      overlay.appendChild(empty);
-    }
+    const input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = "Type to filter — Enter to pick, Esc to cancel";
+    input.className = "shell-picker-input";
+    input.autocomplete = "off";
+    overlay.appendChild(input);
 
-    const buttons = shells.map((shell, i) => {
+    const listEl = document.createElement("div");
+    listEl.className = "shell-picker-list";
+    overlay.appendChild(listEl);
+
+    const empty = document.createElement("div");
+    empty.className = "shell-picker-empty";
+    empty.textContent = "No match.";
+    empty.style.display = "none";
+    overlay.appendChild(empty);
+
+    const all = shells.map((entry) => {
       const btn = document.createElement("button");
-      btn.textContent = shell.name;
-      btn.addEventListener("mouseenter", () => setActive(i));
-      btn.addEventListener("click", () => choose(i));
-      overlay.appendChild(btn);
-      return btn;
+      btn.textContent = entry.name;
+      btn.dataset.search = entry.name.toLowerCase();
+      btn.addEventListener("mouseenter", () => setActiveByButton(btn));
+      btn.addEventListener("click", () => choose(entry));
+      listEl.appendChild(btn);
+      return { btn, entry };
     });
 
     const cancelBtn = document.createElement("button");
     cancelBtn.textContent = "Cancel";
-    cancelBtn.style.marginTop = "12px";
+    cancelBtn.className = "shell-picker-cancel";
     cancelBtn.addEventListener("click", () => done(null));
     overlay.appendChild(cancelBtn);
 
-    function setActive(i) {
-      if (buttons.length === 0) return;
-      activeIdx = (i + buttons.length) % buttons.length;
-      buttons.forEach((b, j) => b.classList.toggle("active", j === activeIdx));
-      buttons[activeIdx].scrollIntoView({ block: "nearest" });
+    function applyFilter() {
+      const q = input.value.trim().toLowerCase();
+      visible = [];
+      for (const item of all) {
+        const match = !q || item.btn.dataset.search.includes(q);
+        item.btn.style.display = match ? "" : "none";
+        if (match) visible.push(item);
+      }
+      empty.style.display = visible.length === 0 && all.length > 0 ? "" : "none";
+      activeIdx = 0;
+      updateActive();
     }
 
-    function choose(i) {
-      done(shells[i]);
+    function updateActive() {
+      visible.forEach((v, i) => v.btn.classList.toggle("active", i === activeIdx));
+      if (visible[activeIdx]) {
+        visible[activeIdx].btn.scrollIntoView({ block: "nearest" });
+      }
+    }
+
+    function setActiveByButton(btn) {
+      const i = visible.findIndex((v) => v.btn === btn);
+      if (i >= 0) { activeIdx = i; updateActive(); }
+    }
+
+    function choose(entry) {
+      done(entry);
     }
 
     function done(value) {
@@ -56,18 +85,29 @@ export function pickShell(shells, mountInto, { title = "Choose a shell" } = {}) 
 
     function onKey(e) {
       if (!overlay.isConnected) return;
-      e.stopPropagation();
-      if (e.key === "ArrowDown") { e.preventDefault(); setActive(activeIdx + 1); }
-      else if (e.key === "ArrowUp") { e.preventDefault(); setActive(activeIdx - 1); }
-      else if (e.key === "Enter") { e.preventDefault(); choose(activeIdx); }
-      else if (e.key === "Escape") { e.preventDefault(); done(null); }
+      if (e.key === "ArrowDown") {
+        e.preventDefault(); e.stopPropagation();
+        if (visible.length) { activeIdx = (activeIdx + 1) % visible.length; updateActive(); }
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault(); e.stopPropagation();
+        if (visible.length) { activeIdx = (activeIdx - 1 + visible.length) % visible.length; updateActive(); }
+      } else if (e.key === "Enter") {
+        e.preventDefault(); e.stopPropagation();
+        if (visible[activeIdx]) choose(visible[activeIdx].entry);
+      } else if (e.key === "Escape") {
+        e.preventDefault(); e.stopPropagation();
+        done(null);
+      } else {
+        // Swallow other keys so global shortcuts (Ctrl+T etc.) don't fire.
+        e.stopPropagation();
+      }
     }
 
-    // Capture phase so we run before any pane / window handler.
     document.addEventListener("keydown", onKey, true);
+    input.addEventListener("input", applyFilter);
 
     mountInto.appendChild(overlay);
-    overlay.focus();
-    if (buttons.length > 0) setActive(0);
+    input.focus();
+    applyFilter();
   });
 }

@@ -107,6 +107,14 @@ export class TabManager {
     this.refitActive();
   }
 
+  // Send text to the focused pane's PTY (as if the user typed it).
+  // Useful for palette commands that inject a one-shot shell command.
+  async writeToFocused(data) {
+    const focused = this.#focusedPane();
+    if (!focused) return;
+    await this.invoke("pty_write", { id: focused.id, data });
+  }
+
   // Swap the focused pane's shell in place: spawn a new pane, replace the
   // tree leaf, dispose the old one. Layout and siblings are untouched.
   async replaceFocusedShell(shell) {

@@ -45,7 +45,7 @@ Produces an installer (`.msi` and `.exe`) under
 | `Ctrl+Tab`         | Next tab                        |
 | `Ctrl+Shift+Tab`   | Previous tab                    |
 | `Alt+Arrow`        | Cycle pane focus                |
-| `Ctrl+Shift+K`     | Open command palette            |
+| `Ctrl+Shift+P`     | Open command palette            |
 
 ## Adding commands to the palette
 

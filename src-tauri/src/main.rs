@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod aws;
 mod pty;
 mod shell;
 mod ssh;
@@ -13,6 +14,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             shell::list_shells,
             ssh::list_ssh_hosts,
+            aws::list_aws_profiles,
+            aws::list_aws_instances,
             pty::pty_spawn,
             pty::pty_write,
             pty::pty_resize,

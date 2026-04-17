@@ -4,13 +4,35 @@
 // Each command: { id, title, keybinding?, group?, run() }.
 // The `run` callback can be async; return values are ignored.
 
-export function registerDefaultCommands(palette, tabs, { openSshMenu } = {}) {
+export function registerDefaultCommands(palette, tabs, {
+  openSshMenu,
+  openAwsLogin,
+  openAwsConnect,
+} = {}) {
   if (openSshMenu) {
     palette.register({
       id: "ssh.connect",
       title: "Connect via SSH...",
       group: "ssh",
       run: () => openSshMenu(),
+    });
+  }
+
+  if (openAwsLogin) {
+    palette.register({
+      id: "aws.login",
+      title: "AWS: Login...",
+      group: "aws",
+      run: () => openAwsLogin(),
+    });
+  }
+
+  if (openAwsConnect) {
+    palette.register({
+      id: "aws.connect",
+      title: "AWS: Connect via SSM...",
+      group: "aws",
+      run: () => openAwsConnect(),
     });
   }
 

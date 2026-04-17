@@ -70,7 +70,7 @@ export class Pane {
       }
 
       if (e.ctrlKey && e.shiftKey &&
-          ["KeyK", "KeyT", "KeyW", "KeyE", "KeyO"].includes(e.code)) return false;
+          ["KeyP", "KeyT", "KeyW", "KeyE", "KeyO"].includes(e.code)) return false;
       if (e.ctrlKey && e.shiftKey && e.code.startsWith("Arrow")) return false;
       if (e.ctrlKey && !e.shiftKey && !e.altKey && e.code === "KeyD") return false;
       if (e.ctrlKey && !e.shiftKey && !e.altKey && e.code === "KeyT") return false;

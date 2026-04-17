@@ -17,18 +17,58 @@ async function openSshMenu() {
   if (picked) await tabs.replaceFocusedShell(picked);
 }
 
+async function pickAwsProfile(title) {
+  const profiles = await invoke("list_aws_profiles");
+  const entries = profiles.map((p) => ({ name: p, command: [p] }));
+  const picked = await pickShell(entries, workspace, { title });
+  return picked ? picked.command[0] : null;
+}
+
+async function openAwsLogin() {
+  const profile = await pickAwsProfile("AWS Login — choose profile");
+  if (!profile) return;
+  await tabs.writeToFocused(`aws sso login --profile ${profile}\r`);
+}
+
+async function openAwsConnect() {
+  const profile = await pickAwsProfile("AWS: choose profile");
+  if (!profile) return;
+
+  let instances;
+  try {
+    instances = await invoke("list_aws_instances", { profile });
+  } catch (err) {
+    alert(`Failed to list instances: ${err}`);
+    return;
+  }
+  if (instances.length === 0) {
+    alert("No running instances for this profile.");
+    return;
+  }
+
+  const entries = instances.map((i) => {
+    const label = i.name ? `${i.name}  —  ${i.id}` : i.id;
+    return {
+      name: label,
+      command: ["aws", "ssm", "start-session", "--target", i.id, "--profile", profile],
+    };
+  });
+  const target = await pickShell(entries, workspace, { title: `AWS SSM on ${profile}` });
+  if (target) await tabs.replaceFocusedShell(target);
+}
+
 const workspace = document.getElementById("workspace");
 const tabsEl = document.getElementById("tabs");
 
 const tabs = new TabManager({ tabsEl, workspace, invoke, listen });
 const palette = new Palette({ root: document.getElementById("palette") });
 
-registerDefaultCommands(palette, tabs, { openSshMenu });
+registerDefaultCommands(palette, tabs, { openSshMenu, openAwsLogin, openAwsConnect });
 
 window.addEventListener("keydown", (e) => {
   const mod = e.ctrlKey && e.shiftKey;
 
-  if (mod && e.code === "KeyK") { e.preventDefault(); palette.open(); return; }
+  if (mod && e.code === "KeyP") { e.preventDefault(); palette.open(); return; }
   if (e.ctrlKey && !e.shiftKey && !e.altKey && e.code === "KeyT") {
     e.preventDefault(); tabs.newTab(); return;
   }
